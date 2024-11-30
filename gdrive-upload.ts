@@ -60,31 +60,82 @@ function getNewToken(oAuth2Client: any): Promise<any> {
   });
 }
 
-async function uploadFile(auth: any, filePath: string, fileName?: string, folderId?: string) {
+async function findFile(drive: any, fileName: string, folderId?: string) {
     try {
-      const drive = google.drive({ version: 'v3', auth });
-      const fileMetadata: any = {
-        name: fileName || path.basename(filePath),
-      };
-  
-      // Add folder ID to metadata if specified
+      let query = `name = '${fileName}' and trashed = false`;
       if (folderId) {
-        fileMetadata.parents = [folderId];
+        query += ` and '${folderId}' in parents`;
       }
   
+      const response = await drive.files.list({
+        q: query,
+        fields: 'files(id, name)',
+        spaces: 'drive',
+      });
+  
+      return response.data.files[0];
+    } catch (error) {
+      console.error('Error searching for file:', error);
+      return null;
+    }
+  }
+  
+  async function uploadFile(auth: any, filePath: string, fileName?: string, folderId?: string) {
+    try {
+      const drive = google.drive({ version: 'v3', auth });
+      const finalFileName = fileName || path.basename(filePath);
+      
+      // Check if file exists
+      const existingFile = await findFile(drive, finalFileName, folderId);
+      
       const media = {
         mimeType: 'text/plain',
         body: fs.createReadStream(filePath),
       };
-      
-      const response = await drive.files.create({
-        requestBody: fileMetadata,
-        media: media,
-        fields: 'id, webViewLink',
-      });
-      
-      console.log('File uploaded successfully.');
+  
+      let response;
+      if (existingFile) {
+        // Update existing file
+        const updateRequest: any = {
+          fileId: existingFile.id,
+          media: media,
+          fields: 'id, webViewLink',
+        };
+  
+        // Handle folder changes if needed
+        if (folderId) {
+          const currentParents = (await drive.files.get({
+            fileId: existingFile.id,
+            fields: 'parents'
+          })).data.parents;
+  
+          updateRequest.addParents = folderId;
+          if (currentParents) {
+            updateRequest.removeParents = currentParents.join(',');
+          }
+        }
+  
+        response = await drive.files.update(updateRequest);
+        console.log('File updated successfully.');
+      } else {
+        // Create new file
+        const fileMetadata: any = {
+          name: finalFileName,
+        };
+        if (folderId) {
+          fileMetadata.parents = [folderId];
+        }
+  
+        response = await drive.files.create({
+          requestBody: fileMetadata,
+          media: media,
+          fields: 'id, webViewLink',
+        });
+        console.log('File uploaded successfully.');
+      }
+  
       console.log('File ID:', response.data.id);
+      console.log('Web View Link:', response.data.webViewLink);
       return response.data;
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -98,7 +149,7 @@ async function uploadFile(auth: any, filePath: string, fileName?: string, folder
       const auth = await authorize();
       
       // Upload to root folder
-      await uploadFile(auth, 'testfile.txt');
+      await uploadFile(auth, 'testfile.txt', 'testfile.txt', "root");
       
       // Upload to specific folder
       await uploadFile(auth, 'testfile.txt', 'testfile.txt', '1lf1aYhmv0Jshfrgyhh4qaV6qASQWd1tc');
