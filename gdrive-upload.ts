@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as http from 'http';
 import * as url from 'url';
 import open from 'open';  // Changed import syntax
+import * as path from 'path';
 
 const CREDENTIALS_PATH = 'credentials.json';
 const TOKEN_PATH = 'token.json';
@@ -59,38 +60,51 @@ function getNewToken(oAuth2Client: any): Promise<any> {
   });
 }
 
-async function uploadFile(auth: any) {
-  try {
-    const drive = google.drive({ version: 'v3', auth });
-    const fileMetadata = {
-      name: 'testfile.txt',
-    };
-    const media = {
-      mimeType: 'text/plain',
-      body: fs.createReadStream('testfile.txt'),
-    };
-    
-    const response = await drive.files.create({
-      requestBody: fileMetadata,
-      media: media,
-      fields: 'id',
-    });
-    
-    console.log('File uploaded successfully. File ID:', response.data.id);
-    return response.data.id;
-  } catch (error) {
-    console.error('Error uploading file:', error);
-    throw error;
+async function uploadFile(auth: any, filePath: string, fileName?: string, folderId?: string) {
+    try {
+      const drive = google.drive({ version: 'v3', auth });
+      const fileMetadata: any = {
+        name: fileName || path.basename(filePath),
+      };
+  
+      // Add folder ID to metadata if specified
+      if (folderId) {
+        fileMetadata.parents = [folderId];
+      }
+  
+      const media = {
+        mimeType: 'text/plain',
+        body: fs.createReadStream(filePath),
+      };
+      
+      const response = await drive.files.create({
+        requestBody: fileMetadata,
+        media: media,
+        fields: 'id, webViewLink',
+      });
+      
+      console.log('File uploaded successfully.');
+      console.log('File ID:', response.data.id);
+      return response.data;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      throw error;
+    }
   }
-}
-
-async function main() {
-  try {
-    const auth = await authorize();
-    await uploadFile(auth);
-  } catch (error) {
-    console.error('Error:', error);
+  
+  // Example usage in main function
+  async function main() {
+    try {
+      const auth = await authorize();
+      
+      // Upload to root folder
+      await uploadFile(auth, 'testfile.txt');
+      
+      // Upload to specific folder
+      await uploadFile(auth, 'testfile.txt', 'testfile.txt', '1lf1aYhmv0Jshfrgyhh4qaV6qASQWd1tc');
+    } catch (error) {
+      console.error('Error:', error);
+    }
   }
-}
-
-main();
+  
+  main();
