@@ -149,10 +149,10 @@ async function findFile(drive: any, fileName: string, folderId?: string) {
       const auth = await authorize();
       
       // Upload to root folder
-      await uploadFile(auth, 'testfile.txt', 'testfile.txt', "root");
+      // await uploadFile(auth, 'testfile.txt', 'testfile.txt', "root");
       
       // Upload to specific folder
-      await uploadFile(auth, 'testfile.txt', 'testfile.txt', '1lf1aYhmv0Jshfrgyhh4qaV6qASQWd1tc');
+      await uploadFile(auth, 'testfile.txt', 'testfile.txt', '1CfxzDUJIh9wLR4cz9pFiPUavFNiubJ07');
     } catch (error) {
       console.error('Error:', error);
     }
