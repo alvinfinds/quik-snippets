@@ -6,7 +6,7 @@ import open from 'open';  // Changed import syntax
 import * as path from 'path';
 
 const CREDENTIALS_PATH = 'credentials.json';
-const TOKEN_PATH = 'token.json';
+const TOKEN_PATH = 'google-token.json';
 const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
 const PORT = 3000;
 

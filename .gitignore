@@ -131,3 +131,4 @@ dist
 
 # Credentials
 credentials.json
+google-token.json
